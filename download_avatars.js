@@ -20,20 +20,25 @@ function getRepoContributors(repoOwner, repoName, cb) {
 
 getRepoContributors("jquery", "jquery", function(err, result) {
   console.log("Errors:", err);
+
+  if (!fs.exists('avatars')){
+    fs.mkdir('avatars',function(err){
+      console.log("Directory created successfully!");
+    });
+  };
+
   for(var contributor in result){
-    console.log(result[contributor].avatar_url);
+    downloadImageByURL(result[contributor].avatar_url, result[contributor].login);
   }
 });
 
 function downloadImageByURL(url, filePath) {
-  var picture = filePath.substring(7, 19);
-  console.log(picture);
 
   request.get(url + filePath)               // Note 1
        .on('error', function (err) {                                   // Note 2
          throw err;
        })
-       .pipe(fs.createWriteStream('.' + picture));
+       .pipe(fs.createWriteStream('./avatars/' + filePath));
 }
 
-downloadImageByURL("https://avatars2.githubusercontent.com/u/2741?v=3&s=466", "avatars/kvirani.jpg")
+//downloadImageByURL("https://avatars2.githubusercontent.com/u/2741?v=3&s=466", "avatars/kvirani.jpg")
