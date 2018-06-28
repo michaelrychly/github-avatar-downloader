@@ -1,7 +1,6 @@
 require('dotenv').config();
 var request = require('request');
 var fs = require('fs');
-//var token = require('./secrets.js');
 var owner = process.argv[2];
 var repo = process.argv[3];
 
@@ -16,45 +15,57 @@ function getRepoContributors(owner, repo, cb) {
   } else if (!repo){
     console.log("Please provide a repository!");
   } else{
-    //http header
-    var options = {
-      url: "https://api.github.com/repos/" + owner + "/" + repo + "/contributors",
-      headers: {
-        'User-Agent': 'request',
-        'Authorization': "token " + process.env.GITHUB_TOKEN
-      }
-    };
+    if (process.env.GITHUB_TOKEN === undefined) {
+      console.log("The .env file has not been created or filled with the correct informtion. ");
+    } else {
+      //http header
+      var options = {
+        url: "https://api.github.com/repos/" + owner + "/" + repo + "/contributors",
+        headers: {
+          'User-Agent': 'request',
+          'Authorization': "token " + process.env.GITHUB_TOKEN
+        }
+      };
 
-    //http request with callback function parsing the result
-    request(options, function(err, res, body) {
-      var obj = JSON.parse(body);
-      cb(err, obj);
-    });
+      //http request with callback function parsing the result
+      request(options, function(err, res, body) {
+        var obj = JSON.parse(body);
+
+        if (obj.message === 'Bad credentials') {
+          console.log("The GITHUB_TOKEN provided is not correct. ");
+        } else {
+          cb(err, obj);
+        }
+      });
+    }
   }
 };
 
 //retrieve the contributors
 getRepoContributors(owner, repo, function(err, result) {
-  console.log("Errors:", err);
+  if (result.length === undefined) {
+    console.log("The owner or repository does not exist. ");
+  } else {
+    //check if the folder avatars exists
+    if (!fs.exists('avatars')){
+      //if it does not exist create the folder
+      fs.mkdir('avatars',function(err){
+        console.log("Directory created successfully!");
+      });
+    };
 
-  //check if the folder avatars exists
-  if (!fs.exists('avatars')){
-    //if it does not exist create the folder
-    fs.mkdir('avatars',function(err){
-      console.log("Directory created successfully!");
-    });
-  };
-
-  //download the image; adjust to result.length if all shall be downloaded
-  for (var i = 0; i < 10; i++) {
-    downloadImageByURL(result[i].avatar_url, result[i].login);
+    //download the image; adjust i < 10 if all shall be downloaded
+    for (var i = 0; i < result.length && i < 10; i++) {
+      console.log("in loop: ", result[i]);
+      downloadImageByURL(result[i].avatar_url, result[i].login);
+    }
   }
 });
 
 //download image function taking url and path as argument
 function downloadImageByURL(url, filePath) {
-  request.get(url)               // Note 1
-       .on('error', function (err) {                                   // Note 2
+  request.get(url)
+       .on('error', function (err) {
          throw err;
        })
        //write the image to the folder
